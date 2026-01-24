@@ -291,6 +291,8 @@ FLAGS_LOOSE=(
   -Iinclude
   -Wall
   -Wextra
+  -isystem/opt/homebrew/include
+  -isystem/usr/local/include
 )
 
 FLAGS_STRICT=(
