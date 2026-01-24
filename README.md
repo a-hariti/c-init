@@ -8,6 +8,12 @@ Bring the simplicity of Rust's Cargo to C.
 ./c-init.sh [options] [path]
 ```
 
+Or run via curl:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/a-hariti/c-init/master/c-init.sh | bash -s -- my_app # [options]
+```
+
 Common options:
 
 - `--name NAME`                  Project name (defaults to directory name)
