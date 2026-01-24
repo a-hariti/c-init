@@ -1,4 +1,4 @@
-# c-init
+# C init
 
 Bring the simplicity of Rust's Cargo to C.
 
