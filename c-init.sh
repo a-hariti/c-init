@@ -11,7 +11,7 @@ Options:
   --cc clang|gcc               Choose compiler (default: clang)
   -s, --strictness LEVEL       loose | strict (default) | strictest
   --linter-strictness LEVEL    loose | strict | strictest (overrides -s for lint only)
-  --color                      Enable colored output
+  --color WHEN                 Color: auto (default) | always | never
   --force                      Allow non-empty directory
   --no-git                     Skip git init and .gitignore
   --no-hello                   Skip generating src/main.c
@@ -19,7 +19,7 @@ Options:
 EOF
 }
 
-COLOR_ENABLED=0
+COLOR_WHEN="auto"
 CC_CHOICE="clang"
 STRICTNESS="strict"
 LINTER_STRICTNESS=""
@@ -38,10 +38,22 @@ err() {
 }
 
 info() {
+  printf "%s\n" "$*"
+}
+
+green() {
   if [ "$COLOR_ENABLED" -eq 1 ]; then
-    printf "\033[32m%s\033[0m\n" "$*"
+    printf "\033[32m%s\033[0m" "$1"
   else
-    printf "%s\n" "$*"
+    printf "%s" "$1"
+  fi
+}
+
+muted() {
+  if [ "$COLOR_ENABLED" -eq 1 ]; then
+    printf "\033[90m%s\033[0m" "$1"
+  else
+    printf "%s" "$1"
   fi
 }
 
@@ -68,8 +80,9 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     --color)
-      COLOR_ENABLED=1
-      shift
+      [ $# -ge 2 ] || { err "--color requires a value"; exit 1; }
+      COLOR_WHEN="$2"
+      shift 2
       ;;
     --force)
       FORCE=1
@@ -102,6 +115,20 @@ while [ $# -gt 0 ]; do
       ;;
   esac
 done
+
+case "$COLOR_WHEN" in
+  auto) COLOR_ENABLED=1 ;;
+  always) COLOR_ENABLED=1 ;;
+  never) COLOR_ENABLED=0 ;;
+  *)
+    err "--color must be auto, always, or never"
+    exit 1
+    ;;
+esac
+
+if [ "$COLOR_WHEN" = "auto" ] && [ ! -t 1 ]; then
+  COLOR_ENABLED=0
+fi
 
 # `help` should behave like --help unless specifically passed via --name
 if [ "$PROJ_PATH" = "help" ] && [ -z "$PROJ_NAME" ]; then
@@ -368,8 +395,9 @@ if [ "$NO_GIT" -ne 1 ] && [ ! -d ".git" ]; then
     printf "target/\n" > .gitignore
 fi
 
-info "Created project '$PROJ_NAME' at $PROJ_PATH"
+info "$(green Created) project '$PROJ_NAME' at $PROJ_PATH"
+info ""
 info "Next steps:"
-info "  make         (debug build)"
-info "  make run     (build+run)"
-info "  make release (release build)"
+info "  make         $(muted '# debug build')"
+info "  make run     $(muted '# build+run')"
+info "  make release $(muted '# release build')"
