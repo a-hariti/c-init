@@ -34,8 +34,6 @@ Example:
 
 ## Expected Output
 
-Successful run:
-
 ```text
 Created project 'my_app' at my_app
 
