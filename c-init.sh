@@ -379,11 +379,11 @@ make lint    # lint with clang-tidy
 
 \`\`\`
 .
-├── include/
-├── src/
-├── target/
-│   ├── debug/
-│   └── release/
+├── include/           # public headers
+├── src/               # sources
+├── target/            # build outputs
+│   ├── debug/         # debug artifacts
+│   └── release/       # release artifacts
 ├── Makefile
 └── README.md
 \`\`\`
