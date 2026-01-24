@@ -20,6 +20,7 @@ EOF
 }
 
 COLOR_WHEN="auto"
+COLOR_ENABLED=1
 CC_CHOICE="clang"
 STRICTNESS="strict"
 LINTER_STRICTNESS=""
@@ -30,10 +31,18 @@ PROJ_NAME=""
 PROJ_PATH=""
 
 err() {
-  if [ "$COLOR_ENABLED" -eq 1 ]; then
+  if [ "${COLOR_ENABLED:-0}" -eq 1 ]; then
     printf "\033[31mError:\033[0m %s\n" "$*" >&2
   else
     printf "Error: %s\n" "$*" >&2
+  fi
+}
+
+warn() {
+  if [ "${COLOR_ENABLED:-0}" -eq 1 ]; then
+    printf "\033[33mWarning:\033[0m %s\n" "$*" >&2
+  else
+    printf "Warning: %s\n" "$*" >&2
   fi
 }
 
@@ -42,7 +51,7 @@ info() {
 }
 
 green() {
-  if [ "$COLOR_ENABLED" -eq 1 ]; then
+  if [ "${COLOR_ENABLED:-0}" -eq 1 ]; then
     printf "\033[32m%s\033[0m" "$1"
   else
     printf "%s" "$1"
@@ -50,7 +59,7 @@ green() {
 }
 
 muted() {
-  if [ "$COLOR_ENABLED" -eq 1 ]; then
+  if [ "${COLOR_ENABLED:-0}" -eq 1 ]; then
     printf "\033[90m%s\033[0m" "$1"
   else
     printf "%s" "$1"
@@ -102,6 +111,8 @@ while [ $# -gt 0 ]; do
       ;;
     -*)
       err "Unknown option: $1"
+      printf "\n" >&2
+      show_help >&2
       exit 1
       ;;
     *)
