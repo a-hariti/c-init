@@ -345,7 +345,7 @@ EOF
     ;;
   strict)
     cat <<EOF > .clang-tidy
-Checks: 'clang-diagnostic-*,clang-analyzer-*,bugprone-*,performance-*'
+Checks: 'clang-diagnostic-*,clang-analyzer-*,bugprone-*,performance-*,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,-bugprone-easily-swappable-parameters,-performance-padding'
 
 WarningsAsErrors: '*'
 HeaderFilterRegex: 'include/.*'
