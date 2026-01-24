@@ -299,21 +299,26 @@ FLAGS_STRICT=(
   "${FLAGS_LOOSE[@]}"
   -Werror
   -Wpedantic
-  -Wshadow
-  -Wpointer-arith
   -Wcast-align
+  -Wpointer-arith
   -Wstrict-prototypes
   -Wmissing-prototypes
-  -Wconversion
-  -Wformat=2
+  -Wsign-conversion
   -Wswitch-enum
+  -Wconversion
   -Wcast-qual
+  -Wshadow
 )
 
 FLAGS_STRICTEST=(
   "${FLAGS_STRICT[@]}"
-  -Wstrict-overflow=5
   -Wundef
+  -Wformat=2
+  -Wfloat-equal
+  -Wswitch-default
+  -Wdouble-promotion
+  -Wstrict-overflow=5
+  -Wstrict-overflow=5
 )
 
 case "$STRICTNESS" in
