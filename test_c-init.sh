@@ -16,6 +16,19 @@ RESET="\033[0m"
 TEST_NAME=""
 CURRENT_FAILED=0
 FAIL_COUNT=0
+TMP_DIRS=()
+
+cleanup() {
+  if [ "$FAIL_COUNT" -ne 0 ]; then
+    return 0
+  fi
+  local dir
+  for dir in "${TMP_DIRS[@]}"; do
+    rm -rf "$dir"
+  done
+}
+
+trap cleanup EXIT
 
 test_begin() {
   TEST_NAME="$1"
@@ -96,6 +109,7 @@ test_ok
 # 3) Create project with no hello and no git
 test_begin "create project with --no-hello --no-git"
 TMPDIR=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR")
 PROJ="$TMPDIR/proj"
 run "$CINIT" --cc gcc -s strict --no-hello --no-git "$PROJ"
 assert_code 0
@@ -110,6 +124,7 @@ test_ok
 # 4) Non-empty directory should fail without --force
 test_begin "non-empty dir fails without --force"
 TMPDIR2=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR2")
 PROJ2="$TMPDIR2/proj"
 mkdir -p "$PROJ2"
 printf "x" > "$PROJ2/file.txt"
@@ -121,6 +136,7 @@ test_ok
 # 5) Linter strictness override should affect .clang-tidy
 test_begin "linter strictness override creates strictest .clang-tidy"
 TMPDIR3=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR3")
 PROJ3="$TMPDIR3/proj"
 run "$CINIT" --no-git --linter-strictness strictest "$PROJ3"
 assert_code 0
