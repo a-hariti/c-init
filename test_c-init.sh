@@ -195,6 +195,33 @@ assert_contains "$(cat "$PROJ6/compile_flags.txt")" "-Wlogical-op"
 assert_contains "$(cat "$PROJ6/compile_flags.txt")" "-Wduplicated-cond"
 test_ok
 
+# 9) Compilation tests for all strictness levels and both compilers
+for cc in clang gcc; do
+  for s in loose strict strictest; do
+    test_begin "compilation: $cc with -s $s"
+    TMPDIR_COMP=$(mktemp -d)
+    TMP_DIRS+=("$TMPDIR_COMP")
+    PROJ_COMP="$TMPDIR_COMP/proj"
+    
+    # Run c-init
+    run "$CINIT" --cc "$cc" -s "$s" "$PROJ_COMP"
+    assert_code 0
+    
+    # Compile using the generated Makefile
+    # We use -C to run make in the project directory
+    run make -C "$PROJ_COMP"
+    assert_code 0
+    assert_file "$PROJ_COMP/target/debug/proj"
+    
+    # Run the compiled binary
+    run "$PROJ_COMP/target/debug/proj"
+    assert_code 0
+    assert_contains "$LAST_OUT" "Hello from proj!"
+    
+    test_ok
+  done
+done
+
 if [ "$FAIL_COUNT" -ne 0 ]; then
   exit 1
 fi

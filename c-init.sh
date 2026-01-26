@@ -267,6 +267,19 @@ fi
 
 # Apply defaults for non-interactive or non-provided flags
 [ -z "$CC_CHOICE" ] && CC_CHOICE="clang"
+
+# On macOS, 'gcc' is often an alias for 'clang'. Try to find a real GCC.
+ACTUAL_CC="$CC_CHOICE"
+if [ "$CC_CHOICE" = "gcc" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+  if command -v gcc-15 >/dev/null 2>&1; then
+    ACTUAL_CC="gcc-15"
+  elif command -v gcc-14 >/dev/null 2>&1; then
+    ACTUAL_CC="gcc-14"
+  elif command -v gcc-13 >/dev/null 2>&1; then
+    ACTUAL_CC="gcc-13"
+  fi
+fi
+
 [ -z "$STRICTNESS" ] && STRICTNESS="strict"
 [ "$FORCE" -eq -1 ] && FORCE=0
 [ "$NO_GIT" -eq -1 ] && NO_GIT=0
@@ -364,7 +377,7 @@ EOF
 fi
 
 cat <<EOF > Makefile
-CC      ?= $CC_CHOICE
+CC      := $ACTUAL_CC
 RM      := rm -rf
 NAME    := $PROJ_NAME_LOWER
 SRC_DIR := src
