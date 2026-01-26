@@ -274,6 +274,11 @@ if [ "$INTERACTIVE" -eq 1 ]; then
     if [ "$res" -eq 1 ]; then NO_GIT=0; else NO_GIT=1; fi
   fi
 
+  if [ "$NO_TESTS" -eq -1 ]; then
+    DEFAULT_MENU_IDX=1 select_menu "Generate tests?" "No" "Yes" || res=$?
+    if [ "$res" -eq 1 ]; then NO_TESTS=0; else NO_TESTS=1; fi
+  fi
+
   info ""
 fi
 
