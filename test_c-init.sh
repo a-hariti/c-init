@@ -247,6 +247,33 @@ assert_contains "$LAST_OUT" "ARG:bar"
 assert_contains "$LAST_OUT" "ARG:baz"
 test_ok
 
+# 11) 'make run --' consumes the dash-dash
+test_begin "'make run --' consumes the separator"
+TMPDIR_SEP=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR_SEP")
+PROJ_SEP="$TMPDIR_SEP/proj"
+./c-init.sh --no-git "$PROJ_SEP" > /dev/null
+cat <<EOF > "$PROJ_SEP/src/main.c"
+#include <stdio.h>
+#include <string.h>
+int main(int argc, char **argv) {
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--") == 0) printf("FOUND_SEP\n");
+        printf("ARG:%s\n", argv[i]);
+    }
+    return 0;
+}
+EOF
+run make -C "$PROJ_SEP" run -- foo -v
+assert_code 0
+assert_contains "$LAST_OUT" "ARG:foo"
+assert_contains "$LAST_OUT" "ARG:-v"
+# Ensure "--" itself was NOT passed to the program
+if [[ "$LAST_OUT" == *"FOUND_SEP"* ]]; then
+    fail "dash-dash was not consumed by Makefile"
+fi
+test_ok
+
 if [ "$FAIL_COUNT" -ne 0 ]; then
   exit 1
 fi

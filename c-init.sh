@@ -407,10 +407,16 @@ OBJECTS := \$(SOURCES:\$(SRC_DIR)/%.c=\$(OBJ_DIR)/%.o)
 # Some cursed make magic to enable `make run [args]`
 # If the first argument is "run" or "run-release"...
 ifeq (\$(firstword \$(MAKECMDGOALS)),\$(filter \$(firstword \$(MAKECMDGOALS)),run run-release))
-  # use the rest as arguments
-  RUN_ARGS := \$(wordlist 2,\$(words \$(MAKECMDGOALS)),\$(MAKECMDGOALS))
-  # ...and turn them into do-nothing targets
-  \$(eval \$(RUN_ARGS):;@:)
+  # Extract all goals after the first one
+  ALL_GOALS := \$(wordlist 2,\$(words \$(MAKECMDGOALS)),\$(MAKECMDGOALS))
+  # If the first argument is "--", skip it for the program args but keep it for targets
+  ifeq (\$(firstword \$(ALL_GOALS)),--)
+    RUN_ARGS := \$(wordlist 2,\$(words \$(ALL_GOALS)),\$(ALL_GOALS))
+  else
+    RUN_ARGS := \$(ALL_GOALS)
+  endif
+  # Define all captured goals as do-nothing targets
+  \$(eval \$(ALL_GOALS):;@:)
 endif
 
 all: \$(TARGET)
@@ -580,6 +586,7 @@ cat <<EOF > README.md
 make           # build debug
 make run       # build and run
 make run foo   # build and run with arguments
+make run -- -v # use -- to pass flags starting with -
 make release   # build release
 \`\`\`
 
