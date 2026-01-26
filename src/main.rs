@@ -1,6 +1,6 @@
-use clap::{ArgAction, CommandFactory, Parser, ValueEnum};
+use clap::{ArgAction, CommandFactory, Parser, Subcommand, ValueEnum};
+use dialoguer::{Select, theme::ColorfulTheme};
 use indoc::{formatdoc, indoc};
-use dialoguer::{theme::ColorfulTheme, Select};
 use std::collections::VecDeque;
 use std::env;
 use std::fs;
@@ -93,12 +93,12 @@ enum ColorWhen {
 }
 
 #[derive(Debug, Parser)]
-#[command(
-    name = "c-init",
-    disable_help_subcommand = true,
-    disable_version_flag = true
-)]
+#[command(name = "c-init", version, disable_help_subcommand = true)]
 struct Cli {
+    /// Help information
+    #[command(subcommand)]
+    command: Option<Commands>,
+
     /// Project name (defaults to directory name)
     #[arg(long)]
     name: Option<String>,
@@ -145,6 +145,12 @@ struct Cli {
 
     /// Project path
     path: Option<String>,
+}
+
+#[derive(Debug, Subcommand)]
+enum Commands {
+    /// Show help
+    Help,
 }
 
 struct InputProvider {
@@ -286,6 +292,12 @@ fn fetch_acutest(dest: &Path) -> io::Result<()> {
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
+    if matches!(cli.command, Some(Commands::Help)) {
+        let mut cmd = Cli::command();
+        let _ = cmd.print_help();
+        println!();
+        return ExitCode::SUCCESS;
+    }
 
     let color_enabled = match cli.color {
         ColorWhen::Always => true,
@@ -449,13 +461,6 @@ fn main() -> ExitCode {
         }
 
         info("");
-    }
-
-    if proj_path.as_deref() == Some("help") && proj_name.is_none() {
-        let mut cmd = Cli::command();
-        let help = cmd.render_help().to_string();
-        println!("{}", help);
-        return ExitCode::SUCCESS;
     }
 
     let cc_choice = cc_choice.unwrap_or(Compiler::Clang);
