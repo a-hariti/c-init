@@ -3,12 +3,16 @@
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-RAW_CINIT="${1:-$ROOT/c-init.sh}"
+RAW_CINIT="${1:-$ROOT/target/debug/c-init}"
 # Resolve to absolute path if relative
 if [[ "$RAW_CINIT" = /* ]]; then
   CINIT="$RAW_CINIT"
 else
   CINIT="$(pwd)/$RAW_CINIT"
+fi
+
+if [ ! -x "$CINIT" ]; then
+  cargo build --quiet
 fi
 
 LAST_OUT=""
@@ -145,12 +149,12 @@ assert_contains "$LAST_OUT" "Usage:"
 test_ok
 
 # 2) Unknown flag should exit 1 and print help
-test_begin "unknown flag exits 1 and prints help"
+test_begin "unknown flag exits 2 and prints help"
 run "$CINIT" --garbage
-assert_code 1
-# Both print "unknown option" and "--garbage" though case/quotes vary
+# Clap prints "unexpected argument" and usage
+assert_code 2
 COMBINED="$LAST_OUT$LAST_ERR"
-assert_contains "$(echo "$COMBINED" | tr '[:upper:]' '[:lower:]')" "unknown option"
+assert_contains "$(echo "$COMBINED" | tr '[:upper:]' '[:lower:]')" "unexpected argument"
 assert_contains "$COMBINED" "--garbage"
 assert_contains "$COMBINED" "Usage:"
 test_ok
@@ -327,7 +331,7 @@ TMPDIR_ARGS=$(mktemp -d)
 TMP_DIRS+=("$TMPDIR_ARGS")
 PROJ_ARGS="$TMPDIR_ARGS/proj"
 
-./c-init.sh --no-git "$PROJ_ARGS" > /dev/null
+"$CINIT" --no-git "$PROJ_ARGS" > /dev/null
 # Replace main.c with one that prints args
 cat <<EOF > "$PROJ_ARGS/src/main.c"
 #include <stdio.h>
@@ -349,7 +353,7 @@ test_begin "'make run --' consumes the separator"
 TMPDIR_SEP=$(mktemp -d)
 TMP_DIRS+=("$TMPDIR_SEP")
 PROJ_SEP="$TMPDIR_SEP/proj"
-./c-init.sh --no-git "$PROJ_SEP" > /dev/null
+"$CINIT" --no-git "$PROJ_SEP" > /dev/null
 cat <<EOF > "$PROJ_SEP/src/main.c"
 #include <stdio.h>
 #include <string.h>
@@ -376,7 +380,7 @@ test_begin "'make run-release' passes arguments"
 TMPDIR_REL=$(mktemp -d)
 TMP_DIRS+=("$TMPDIR_REL")
 PROJ_REL="$TMPDIR_REL/proj"
-./c-init.sh --no-git "$PROJ_REL" > /dev/null
+"$CINIT" --no-git "$PROJ_REL" > /dev/null
 cat <<EOF > "$PROJ_REL/src/main.c"
 #include <stdio.h>
 int main(int argc, char **argv) {
