@@ -1,5 +1,6 @@
 use clap::{ArgAction, CommandFactory, Parser, ValueEnum};
 use indoc::{formatdoc, indoc};
+use dialoguer::{theme::ColorfulTheme, Select};
 use std::collections::VecDeque;
 use std::env;
 use std::fs;
@@ -240,17 +241,15 @@ fn select_menu(
         return Ok(selected);
     }
 
-    println!("{}:", prompt);
-    for (idx, option) in options.iter().enumerate() {
-        println!("  {}. {}", idx, option);
-    }
-    let line = input.read_line(&format!("Select [{}]: ", default_idx))?;
-    if let Ok(idx) = line.trim().parse::<usize>() {
-        if idx < options.len() {
-            selected = idx;
-        }
-    }
-    println!("{}: {}\n", prompt, green(options[selected], color_enabled));
+    let theme = ColorfulTheme::default();
+    let selection = Select::with_theme(&theme)
+        .with_prompt(prompt)
+        .items(options)
+        .default(default_idx)
+        .interact()
+        .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+
+    selected = selection;
     Ok(selected)
 }
 
