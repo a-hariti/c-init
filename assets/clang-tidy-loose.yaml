@@ -1,0 +1,5 @@
+# Minimal: diagnostics + analyzer
+Checks: 'clang-diagnostic-*,clang-analyzer-*'
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: 'include/.*'

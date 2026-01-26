@@ -1,6 +1,6 @@
-CC      := clang
+CC      := {CC}
 RM      := rm -rf
-NAME    := example
+NAME    := {NAME}
 SRC_DIR := src
 INC_DIR := include
 
@@ -87,6 +87,7 @@ lint:
 clean:
 	$(RM) target
 
+# TEST_SECTION_BEGIN
 TEST_DIR := tests
 TEST_BUILD_DIR := $(BUILD_DIR)/tests
 TEST_TARGET := $(TEST_BUILD_DIR)/$(NAME)_tests
@@ -115,5 +116,6 @@ endif
 
 sanitize:
 	@$(MAKE) SANITIZE=1 MODE=debug test
+# TEST_SECTION_END
 
-.PHONY: all run release run-release test sanitize fmt lint clean
+.PHONY: {PHONY}

@@ -5,13 +5,13 @@ Bring the simplicity of Rust's Cargo to C.
 ## Usage
 
 ```sh
-./c-init.sh [options] [path]
+c-init [options] [path]
 ```
 
-Or run via curl:
+From source:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/a-hariti/c-init/master/c-init.sh | bash -s -- my_app # [options]
+cargo run -- [options] [path]
 ```
 
 Options:
@@ -32,7 +32,7 @@ Options:
 Example:
 
 ```sh
-./c-init.sh my_app
+c-init my_app
 ```
 
 ## Example project
