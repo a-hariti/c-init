@@ -36,6 +36,46 @@ cleanup() {
 
 trap cleanup EXIT
 
+ACUTEST_TMP=$(mktemp -d)
+TMP_DIRS+=("$ACUTEST_TMP")
+ACUTEST_BIN="$ACUTEST_TMP/bin"
+mkdir -p "$ACUTEST_BIN"
+ACUTEST_CACHE="$ACUTEST_TMP/acutest.h"
+
+cat <<'EOF' > "$ACUTEST_BIN/curl"
+#!/usr/bin/env bash
+set -euo pipefail
+OUT=""
+URL=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -o)
+      OUT="$2"
+      shift 2
+      ;;
+    *)
+      if [[ "$1" != -* ]]; then
+        URL="$1"
+      fi
+      shift
+      ;;
+  esac
+done
+
+[ -n "$OUT" ] || { echo "curl stub missing -o" >&2; exit 2; }
+[ -n "$URL" ] || { echo "curl stub missing URL" >&2; exit 2; }
+
+if [ ! -f "__ACUTEST_CACHE__" ]; then
+  /usr/bin/curl -fsSL "$URL" -o "__ACUTEST_CACHE__"
+fi
+
+cat "__ACUTEST_CACHE__" > "$OUT"
+EOF
+sed -i "" "s|__ACUTEST_CACHE__|$ACUTEST_CACHE|g" "$ACUTEST_BIN/curl"
+chmod +x "$ACUTEST_BIN/curl"
+
+export PATH="$ACUTEST_BIN:$PATH"
+
 test_begin() {
   TEST_NAME="$1"
   CURRENT_FAILED=0
@@ -128,6 +168,19 @@ assert_dir "$PROJ/target"
 assert_file "$PROJ/Makefile"
 assert_file "$PROJ/compile_flags.txt"
 assert_missing "$PROJ/src/main.c"
+assert_dir "$PROJ/tests"
+assert_file "$PROJ/tests/test-deps/acutest.h"
+assert_file "$PROJ/tests/compile_flags.txt"
+test_ok
+
+# 3b) --no-tests skips tests and vendoring
+test_begin "--no-tests skips tests folder"
+TMPDIR_NO_TESTS=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR_NO_TESTS")
+PROJ_NO_TESTS="$TMPDIR_NO_TESTS/proj"
+run "$CINIT" --no-tests "$PROJ_NO_TESTS"
+assert_code 0
+assert_missing "$PROJ_NO_TESTS/tests"
 test_ok
 
 # 4) Non-empty directory should fail without --force
@@ -223,6 +276,18 @@ for cc in clang gcc; do
     test_ok
   done
 done
+
+# 9b) make test builds and runs tests
+test_begin "make test builds and runs tests"
+TMPDIR_TESTS=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR_TESTS")
+PROJ_TESTS="$TMPDIR_TESTS/proj"
+run "$CINIT" --no-git "$PROJ_TESTS"
+assert_code 0
+run make -C "$PROJ_TESTS" test
+assert_code 0
+assert_file "$PROJ_TESTS/target/debug/tests/proj_tests"
+test_ok
 
 # 10) 'make run' with arguments
 test_begin "'make run' passes arguments"

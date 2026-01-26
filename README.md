@@ -42,6 +42,7 @@ Next steps:
   make         # debug build
   make run     # build+run
   make release # release build
+  make test    # build and run tests
 ```
 
 The generated project structure:
@@ -60,9 +61,9 @@ my_app/
 
 ## Philosophy
 
-- Simplicity : Uses tools you're familiar with.
-- Sensible defaults, but configurable through flags.
-- Stay out of the way : Not yet another config file in your root directory.
+- Simplicity : Use tools you're familiar with.
+- Sensible defaults : Everything you need to actually start coding.
+- Stay out of the way : Not yet another config file in your root directory, You own your code base.
 
 ## Licence
 

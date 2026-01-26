@@ -15,6 +15,7 @@ Options:
   --force                      Allow non-empty directory
   --no-git                     Skip git init and .gitignore
   --no-hello                   Skip generating src/main.c
+  --no-tests                   Skip generating tests and vendoring acutest
   -i, --interactive            Run interactive wizard
   -h, --help                   Show this help
 EOF
@@ -28,6 +29,7 @@ LINTER_STRICTNESS=""
 FORCE=-1
 NO_GIT=-1
 NO_HELLO=-1
+NO_TESTS=-1
 PROJ_NAME=""
 PROJ_PATH=""
 INTERACTIVE=0
@@ -173,6 +175,10 @@ while [ $# -gt 0 ]; do
       NO_HELLO=1
       shift
       ;;
+    --no-tests)
+      NO_TESTS=1
+      shift
+      ;;
     -i|--interactive)
       INTERACTIVE=1
       shift
@@ -284,6 +290,7 @@ fi
 [ "$FORCE" -eq -1 ] && FORCE=0
 [ "$NO_GIT" -eq -1 ] && NO_GIT=0
 [ "$NO_HELLO" -eq -1 ] && NO_HELLO=0
+[ "$NO_TESTS" -eq -1 ] && NO_TESTS=0
 
 case "$COLOR_WHEN" in
   auto) COLOR_ENABLED=1 ;;
@@ -364,6 +371,24 @@ cd "$PROJ_PATH" || exit
 # Create Directory Structure
 mkdir -p src include target
 
+fetch_acutest() {
+  local dest="$1"
+  local acutest_url="https://raw.githubusercontent.com/mity/acutest/refs/heads/master/include/acutest.h"
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$acutest_url" -o "$dest"
+    return
+  fi
+
+  if command -v wget >/dev/null 2>&1; then
+    wget -qO "$dest" "$acutest_url"
+    return
+  fi
+
+  err "curl or wget is required to download acutest (set --no-tests to skip)"
+  exit 1
+}
+
 # Entry point
 if [ "$NO_HELLO" -ne 1 ]; then
 cat <<EOF > src/main.c
@@ -373,6 +398,42 @@ int main(void) {
   printf("Hello from %s!\n", "$PROJ_NAME");
   return 0;
 }
+EOF
+fi
+
+if [ "$NO_TESTS" -ne 1 ]; then
+  mkdir -p tests/test-deps
+  fetch_acutest "tests/test-deps/acutest.h"
+  cat <<'EOF' > tests/test_basic.c
+#include <stdlib.h>
+
+#define ACUTEST_IMPLEMENTATION
+#include "acutest.h"
+
+static void test_tutorial(void) {
+  void *mem;
+
+  mem = malloc(10);
+  TEST_CHECK(mem != NULL);
+
+  void *mem2 = realloc(mem, 20);
+  TEST_CHECK(mem2 != NULL);
+  mem = mem2;
+
+  free(mem);
+}
+
+static void test_addition(void) {
+  int a = 1;
+  int b = 2;
+  TEST_CHECK(a + b == 3);
+}
+
+TEST_LIST = {
+    {"tutorial", test_tutorial},
+    {"addition", test_addition},
+    {NULL, NULL},
+};
 EOF
 fi
 
@@ -404,7 +465,7 @@ TARGET = \$(BUILD_DIR)/\$(NAME)
 SOURCES := \$(wildcard \$(SRC_DIR)/*.c)
 OBJECTS := \$(SOURCES:\$(SRC_DIR)/%.c=\$(OBJ_DIR)/%.o)
 
-# Some cursed make magic to enable `make run [args]`
+# Some cursed make magic to enable make run [args]
 # If the first argument is "run" or "run-release"...
 ifeq (\$(firstword \$(MAKECMDGOALS)),\$(filter \$(firstword \$(MAKECMDGOALS)),run run-release))
   # Extract all goals after the first one
@@ -440,22 +501,58 @@ run-release:
 \$(OBJ_DIR)/%.o: \$(SRC_DIR)/%.c
 	@mkdir -p \$(OBJ_DIR)
 	\$(CC) \$(CFLAGS) -c $< -o \$@
+EOF
 
+if [ "$NO_TESTS" -ne 1 ]; then
+cat <<'EOF' >> Makefile
+TEST_DIR := tests
+TEST_BUILD_DIR := $(BUILD_DIR)/tests
+TEST_TARGET := $(TEST_BUILD_DIR)/$(NAME)_tests
+TEST_CFLAGS_BASE := @compile_flags.txt
+TEST_CFLAGS := $(TEST_CFLAGS_BASE) $(CFLAGS_MODE)
+
+TEST_SOURCES := $(wildcard $(TEST_DIR)/*.c)
+TEST_OBJECTS := $(TEST_SOURCES:$(TEST_DIR)/%.c=$(TEST_BUILD_DIR)/%.o)
+
+ifneq ($(strip $(TEST_SOURCES)),)
+test: $(TEST_TARGET)
+	@./$(TEST_TARGET)
+
+$(TEST_TARGET): $(TEST_OBJECTS)
+	@mkdir -p $(TEST_BUILD_DIR)
+	$(CC) $(TEST_OBJECTS) -o $(TEST_TARGET)
+
+$(TEST_BUILD_DIR)/%.o: $(TEST_DIR)/%.c
+	@mkdir -p $(TEST_BUILD_DIR)
+	@cd $(TEST_DIR) && \
+		$(CC) $(TEST_CFLAGS) -c $(notdir $<) -o ../$@
+else
+test:
+	@echo "No tests found in $(TEST_DIR)/ (add *.c)."
+endif
+EOF
+fi
+
+cat <<'EOF' >> Makefile
 fmt:
-	@command -v clang-format >/dev/null && \\
-		clang-format -i --style=file --fallback-style=LLVM \$(SOURCES) \$(wildcard \$(INC_DIR)/*.h) || \\
+	@command -v clang-format >/dev/null && \
+		clang-format -i --style=file --fallback-style=LLVM $(SOURCES) $(wildcard $(INC_DIR)/*.h) || \
 		echo "clang-format not found, skipping"
 
 lint:
-	@command -v clang-tidy >/dev/null && \\
-		clang-tidy --quiet \$(SOURCES) -- \$(CFLAGS) || \\
+	@command -v clang-tidy >/dev/null && \
+		clang-tidy --quiet $(SOURCES) -- $(CFLAGS) || \
 		echo "clang-tidy not found, skipping"
 
 clean:
-	\$(RM) target
-
-.PHONY: all run release run-release fmt lint clean
+	$(RM) target
 EOF
+
+if [ "$NO_TESTS" -ne 1 ]; then
+  echo ".PHONY: all run release run-release test fmt lint clean" >> Makefile
+else
+  echo ".PHONY: all run release run-release fmt lint clean" >> Makefile
+fi
 # Create compile_flags.txt for IDEs and consumption by make
 FLAGS_LOOSE=(
   -std=c11
@@ -534,6 +631,13 @@ case "$STRICTNESS" in
     ;;
 esac
 
+if [ "$NO_TESTS" -ne 1 ]; then
+  awk '
+    $0 == "-Iinclude" { print "-I../include"; print "-I."; print "-isystem"; print "./test-deps"; next }
+    { print }
+  ' compile_flags.txt > tests/compile_flags.txt
+fi
+
 case "$LINTER_STRICTNESS" in
   loose)
     cat <<EOF > .clang-tidy
@@ -587,6 +691,7 @@ make run       # build and run
 make run foo   # build and run with arguments
 make run -- -v # use -- to pass flags starting with -
 make release   # build release
+make test      # build and run tests
 \`\`\`
 
 ## Format & Lint
@@ -600,11 +705,13 @@ make lint    # lint with clang-tidy
 
 \`\`\`
 .
-├── include/           # public headers
-├── src/               # sources
-├── target/            # build outputs
-│   ├── debug/         # debug artifacts
-│   └── release/       # release artifacts
+├── include/                 # public headers
+├── src/                     # sources
+├── tests/                   # tests + vendored acutest
+│   └── compile_flags.txt    # test-specific compile flags for clangd
+├── target/                  # build outputs
+│   ├── debug/               # debug artifacts
+│   └── release/             # release artifacts
 ├── Makefile
 └── README.md
 \`\`\`
@@ -622,3 +729,6 @@ info "Next steps:"
 info "  make         $(muted '# debug build')"
 info "  make run     $(muted '# build+run')"
 info "  make release $(muted '# release build')"
+if [ "$NO_TESTS" -ne 1 ]; then
+  info "  make test    $(muted '# build and run tests')"
+fi
