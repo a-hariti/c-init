@@ -224,6 +224,29 @@ for cc in clang gcc; do
   done
 done
 
+# 10) 'make run' with arguments
+test_begin "'make run' passes arguments"
+TMPDIR_ARGS=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR_ARGS")
+PROJ_ARGS="$TMPDIR_ARGS/proj"
+
+./c-init.sh --no-git "$PROJ_ARGS" > /dev/null
+# Replace main.c with one that prints args
+cat <<EOF > "$PROJ_ARGS/src/main.c"
+#include <stdio.h>
+int main(int argc, char **argv) {
+    for (int i = 1; i < argc; i++) printf("ARG:%s\n", argv[i]);
+    return 0;
+}
+EOF
+
+run make -C "$PROJ_ARGS" run foo bar baz
+assert_code 0
+assert_contains "$LAST_OUT" "ARG:foo"
+assert_contains "$LAST_OUT" "ARG:bar"
+assert_contains "$LAST_OUT" "ARG:baz"
+test_ok
+
 if [ "$FAIL_COUNT" -ne 0 ]; then
   exit 1
 fi

@@ -289,7 +289,7 @@ case "$COLOR_WHEN" in
   auto) COLOR_ENABLED=1 ;;
   always) COLOR_ENABLED=1 ;;
   never) COLOR_ENABLED=0 ;;
-  *) 
+  *)
     err "--color must be auto, always, or never"
     exit 1
     ;;
@@ -307,7 +307,7 @@ fi
 
 case "$CC_CHOICE" in
   clang|gcc) ;;
-  *) 
+  *)
     err "--cc must be clang or gcc"
     exit 1
     ;;
@@ -315,7 +315,7 @@ esac
 
 case "$STRICTNESS" in
   loose|strict|strictest) ;;
-  *) 
+  *)
     err "--strictness must be loose, strict, or strictest"
     exit 1
     ;;
@@ -324,7 +324,7 @@ esac
 if [ -n "$LINTER_STRICTNESS" ]; then
   case "$LINTER_STRICTNESS" in
     loose|strict|strictest) ;;
-    *) 
+    *)
       err "--linter-strictness must be loose, strict, or strictest"
       exit 1
       ;;
@@ -404,18 +404,27 @@ TARGET = \$(BUILD_DIR)/\$(NAME)
 SOURCES := \$(wildcard \$(SRC_DIR)/*.c)
 OBJECTS := \$(SOURCES:\$(SRC_DIR)/%.c=\$(OBJ_DIR)/%.o)
 
+# Some cursed make magic to enable `make run [args]`
+# If the first argument is "run" or "run-release"...
+ifeq (\$(firstword \$(MAKECMDGOALS)),\$(filter \$(firstword \$(MAKECMDGOALS)),run run-release))
+  # use the rest as arguments
+  RUN_ARGS := \$(wordlist 2,\$(words \$(MAKECMDGOALS)),\$(MAKECMDGOALS))
+  # ...and turn them into do-nothing targets
+  \$(eval \$(RUN_ARGS):;@:)
+endif
+
 all: \$(TARGET)
 
 # Build and run
 run: \$(TARGET)
-	@./\$(TARGET)
+	@./\$(TARGET) \$(RUN_ARGS)
 
 release:
 	@\$(MAKE) MODE=release
 
 run-release:
 	@\$(MAKE) MODE=release
-	@./\$(TARGET)
+	@./\$(TARGET) \$(RUN_ARGS)
 
 # Link the executable
 \$(TARGET): \$(OBJECTS)
@@ -569,7 +578,8 @@ cat <<EOF > README.md
 
 \`\`\`sh
 make           # build debug
-make run       # build debug and run
+make run       # build and run
+make run foo   # build and run with arguments
 make release   # build release
 \`\`\`
 
