@@ -35,6 +35,10 @@ Example:
 ./c-init.sh my_app
 ```
 
+## Example project
+
+An `./example` project is included in this repo with the default settings so you can see the generated output.
+
 ## Expected Output
 
 ```text

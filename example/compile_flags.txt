@@ -1,0 +1,17 @@
+-std=c11
+-Iinclude
+-Wall
+-Wextra
+-isystem/opt/homebrew/include
+-isystem/usr/local/include
+-Werror
+-Wpedantic
+-Wcast-align
+-Wpointer-arith
+-Wmissing-prototypes
+-Wstrict-prototypes
+-Wsign-conversion
+-Wswitch-enum
+-Wconversion
+-Wcast-qual
+-Wshadow
