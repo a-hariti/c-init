@@ -206,6 +206,8 @@ for cc in clang gcc; do
     # Run c-init
     run "$CINIT" --cc "$cc" -s "$s" "$PROJ_COMP"
     assert_code 0
+    # Check that it mentions the compiler (could be gcc, clang, or gcc-15 etc)
+    assert_contains "$LAST_OUT" "using "
     
     # Compile using the generated Makefile
     # We use -C to run make in the project directory

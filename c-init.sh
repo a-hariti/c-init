@@ -600,7 +600,7 @@ if [ "$NO_GIT" -ne 1 ] && [ ! -d ".git" ]; then
     printf "target/\n" > .gitignore
 fi
 
-info "$(green Created) project '$PROJ_NAME' at $PROJ_PATH"
+info "$(green Created) project '$PROJ_NAME' at $PROJ_PATH (using $ACTUAL_CC)"
 info ""
 info "Next steps:"
 info "  make         $(muted '# debug build')"
