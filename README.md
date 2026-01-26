@@ -14,6 +14,12 @@ From source:
 cargo run -- [options] [path]
 ```
 
+Add to `~/.cargo/bin`:
+
+```sh
+cargo install --path .
+```
+
 Options:
 
 - `--name NAME` Project name (defaults to directory name)
