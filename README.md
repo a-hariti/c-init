@@ -2,7 +2,7 @@
 
 Bring the simplicity of Rust's Cargo to C.
 
-[![asciicast](https://asciinema.org/a/JgMRkyLA8PJZHPeE.svg)](https://asciinema.org/a/JgMRkyLA8PJZHPeE)
+[![asciicast](https://asciinema.org/a/eQ6lNdLhs4qTgR0v.svg)](https://asciinema.org/a/eQ6lNdLhs4qTgR0v)
 
 ## Usage
 
