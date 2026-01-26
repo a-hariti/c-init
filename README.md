@@ -16,17 +16,18 @@ curl -fsSL https://raw.githubusercontent.com/a-hariti/c-init/master/c-init.sh | 
 
 Options:
 
-- `--name NAME`                  Project name (defaults to directory name)
-- `--cc clang|gcc`               Choose compiler (default: clang)
-- `-s, --strictness LEVEL`       loose | strict (default) | strictest
-- `--linter-strictness LEVEL`    loose | strict | strictest (overrides `-s` for lint only)
-- `--no-tests`                   Skip generating tests and vendoring acutest
-- `--color WHEN`                 auto (default) | always | never
-- `--force`                      Allow non-empty directory
-- `--no-git`                     Skip git init and .gitignore
-- `--no-hello`                   Skip generating `src/main.c`
-- `-i, --interactive`            Run interactive wizard
-- `-h, --help`                   Show help
+- `--name NAME` Project name (defaults to directory name)
+- `--cc clang|gcc` Choose compiler (default: clang)
+- `-s, --strictness LEVEL` loose | strict (default) | strictest
+- `--linter-strictness LEVEL` loose | strict | strictest (overrides `-s` for lint only)
+- `--no-tests` Skip generating tests and vendoring acutest
+- `--color WHEN` auto (default) | always | never
+- `--force` Allow non-empty directory
+- `--no-git` Skip git init and .gitignore
+- `--no-commit` Skip initial git commit
+- `--no-hello` Skip generating `src/main.c`
+- `-i, --interactive` Run interactive wizard
+- `-h, --help` Show help
 
 Example:
 
@@ -40,24 +41,38 @@ Example:
 Created project 'my_app' at my_app
 
 Next steps:
-  make         # debug build
-  make run     # build+run
-  make release # release build
-  make test    # build and run tests
+  make          # debug build
+  make run      # build+run
+  make release  # release build
+  make test     # build and run tests
+  make sanitize # build and run with address/UB sanitizers
 ```
+
+## What you get
+
+- Strict compiler flags by default (with loose/strict/strictest levels).
+- clang-tidy config wired to your chosen strictness.
+- Tests scaffolded with [Acutest](https://github.com/mity/acutest), plus a `make test` target.
+- Clean project ready for LSP.
+- Sanitizer target for quick memory/UB checks.
 
 The generated project structure:
 
 ```text
 my_app/
-├── include/
-├── src/
-│   └── main.c
-├── target/
-├── .clang-tidy
-├── compile_flags.txt
-├── Makefile
-└── README.md
+├── include/               # public headers
+├── src/                   # sources
+│   └── main.c             # entry point
+├── target/                # build output
+├── tests/
+│   ├── test_basic.c       # starter tests
+│   ├── test-deps/         # vendored test deps
+│   │   └── acutest.h      # acutest single-header lib
+│   └── compile_flags.txt  # clangd flags for tests
+├── .clang-tidy            # lint config
+├── compile_flags.txt      # clangd/flags for app sources
+├── Makefile               # build + run targets
+└── README.md              # project guide
 ```
 
 ## Philosophy
