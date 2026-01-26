@@ -435,18 +435,16 @@ FLAGS_LOOSE=(
   -Iinclude
   -Wall
   -Wextra
-  -isystem/opt/homebrew/include
-  -isystem/usr/local/include
 )
 
-FLAGS_STRICT=(
-  "${FLAGS_LOOSE[@]}"
+# Common strict flags for both compilers
+FLAGS_STRICT_COMMON=(
   -Werror
   -Wpedantic
   -Wcast-align
   -Wpointer-arith
-  -Wstrict-prototypes
   -Wmissing-prototypes
+  -Wstrict-prototypes
   -Wsign-conversion
   -Wswitch-enum
   -Wconversion
@@ -454,16 +452,48 @@ FLAGS_STRICT=(
   -Wshadow
 )
 
-FLAGS_STRICTEST=(
-  "${FLAGS_STRICT[@]}"
+# Common strictest flags for both compilers
+FLAGS_STRICTEST_COMMON=(
   -Wundef
   -Wformat=2
   -Wfloat-equal
   -Wswitch-default
   -Wdouble-promotion
-  -Wstrict-overflow=5
-  -Wstrict-overflow=5
 )
+
+if [ "$CC_CHOICE" = "clang" ]; then
+  FLAGS_LOOSE+=(
+    -isystem/opt/homebrew/include
+    -isystem/usr/local/include
+  )
+  FLAGS_STRICT=(
+    "${FLAGS_LOOSE[@]}"
+    "${FLAGS_STRICT_COMMON[@]}"
+  )
+  FLAGS_STRICTEST=(
+    "${FLAGS_STRICT[@]}"
+    "${FLAGS_STRICTEST_COMMON[@]}"
+    -Wstrict-overflow=5
+  )
+else
+  # GCC
+  FLAGS_STRICT=(
+    "${FLAGS_LOOSE[@]}"
+    "${FLAGS_STRICT_COMMON[@]}"
+    -Wlogical-op
+    -Wjump-misses-init
+  )
+  FLAGS_STRICTEST=(
+    "${FLAGS_STRICT[@]}"
+    "${FLAGS_STRICTEST_COMMON[@]}"
+    -Wstrict-overflow=2
+    -Wduplicated-cond
+    -Wduplicated-branches
+    -Wrestrict
+    -Wnull-dereference
+    -Wjump-misses-init
+  )
+fi
 
 case "$STRICTNESS" in
   loose)
