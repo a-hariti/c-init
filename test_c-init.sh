@@ -171,6 +171,8 @@ assert_missing "$PROJ/src/main.c"
 assert_dir "$PROJ/tests"
 assert_file "$PROJ/tests/test-deps/acutest.h"
 assert_file "$PROJ/tests/compile_flags.txt"
+assert_contains "$(cat "$PROJ/Makefile")" "sanitize:"
+assert_contains "$(cat "$PROJ/README.md")" "make sanitize"
 test_ok
 
 # 3c) --no-commit skips initial commit
@@ -246,6 +248,22 @@ touch "existing/file"
 run "$CINIT" -i <<< "$(printf "existing\n0\n")"
 assert_code 1
 assert_contains "$COMBINED" "Exiting..."
+cd "$ROOT"
+test_ok
+
+# 7b) Interactive mode accepts overwrite
+test_begin "interactive mode accepts overwrite"
+TMPDIR5B=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR5B")
+cd "$TMPDIR5B"
+mkdir -p "existing"
+touch "existing/file"
+
+# Input "existing" then "1" (Yes) for overwrite
+run "$CINIT" -i <<< "$(printf "existing\n1\n")"
+assert_code 0
+assert_dir "existing/src"
+assert_file "existing/Makefile"
 cd "$ROOT"
 test_ok
 

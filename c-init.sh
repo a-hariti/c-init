@@ -235,8 +235,8 @@ if [ "$INTERACTIVE" -eq 1 ]; then
   [ -z "$PROJ_PATH" ] && PROJ_PATH="."
 
   if [ -d "$PROJ_PATH" ] && [ "$(ls -A "$PROJ_PATH")" ] && [ "$FORCE" -eq -1 ]; then
-    DEFAULT_MENU_IDX=0 select_menu "Folder not empty. Overwrite?" "No" "Yes"
-    res=$?
+    res=0
+    DEFAULT_MENU_IDX=0 select_menu "Folder not empty. Overwrite?" "No" "Yes" || res=$?
     if [ "$res" -eq 1 ]; then
       FORCE=1
     else
@@ -460,8 +460,11 @@ CFLAGS_BASE  := @compile_flags.txt
 
 CFLAGS_DEBUG   := -O0 -g
 CFLAGS_RELEASE := -O3 -DNDEBUG
+CFLAGS_SANITIZE := -fsanitize=address,undefined -fno-omit-frame-pointer -O1 -g
+LDFLAGS_SANITIZE := -fsanitize=address,undefined
 
 MODE ?= debug
+SANITIZE ?= 0
 ifeq (\$(MODE),release)
   BUILD_DIR := target/release
   CFLAGS_MODE := \$(CFLAGS_RELEASE)
@@ -470,7 +473,16 @@ else
   CFLAGS_MODE := \$(CFLAGS_DEBUG)
 endif
 
-CFLAGS := \$(CFLAGS_BASE) \$(CFLAGS_MODE)
+ifeq (\$(SANITIZE),1)
+  CFLAGS_EXTRA := \$(CFLAGS_SANITIZE)
+  LDFLAGS_EXTRA := \$(LDFLAGS_SANITIZE)
+else
+  CFLAGS_EXTRA :=
+  LDFLAGS_EXTRA :=
+endif
+
+CFLAGS := \$(CFLAGS_BASE) \$(CFLAGS_MODE) \$(CFLAGS_EXTRA)
+LDFLAGS := \$(LDFLAGS_EXTRA)
 OBJ_DIR := \$(BUILD_DIR)
 TARGET = \$(BUILD_DIR)/\$(NAME)
 
@@ -507,7 +519,7 @@ run-release:
 # Link the executable
 \$(TARGET): \$(OBJECTS)
 	@mkdir -p \$(OBJ_DIR)
-	\$(CC) \$(OBJECTS) -o \$(TARGET)
+	\$(CC) \$(OBJECTS) -o \$(TARGET) \$(LDFLAGS)
 
 # Compile source files to object files
 \$(OBJ_DIR)/%.o: \$(SRC_DIR)/%.c
@@ -532,7 +544,7 @@ test: $(TEST_TARGET)
 
 $(TEST_TARGET): $(TEST_OBJECTS)
 	@mkdir -p $(TEST_BUILD_DIR)
-	$(CC) $(TEST_OBJECTS) -o $(TEST_TARGET)
+	$(CC) $(TEST_OBJECTS) -o $(TEST_TARGET) $(LDFLAGS)
 
 $(TEST_BUILD_DIR)/%.o: $(TEST_DIR)/%.c
 	@mkdir -p $(TEST_BUILD_DIR)
@@ -542,6 +554,15 @@ else
 test:
 	@echo "No tests found in $(TEST_DIR)/ (add *.c)."
 endif
+sanitize:
+	@$(MAKE) SANITIZE=1 MODE=debug test
+EOF
+fi
+
+if [ "$NO_TESTS" -eq 1 ]; then
+cat <<'EOF' >> Makefile
+sanitize:
+	@$(MAKE) SANITIZE=1 MODE=debug all
 EOF
 fi
 
@@ -561,9 +582,9 @@ clean:
 EOF
 
 if [ "$NO_TESTS" -ne 1 ]; then
-  echo ".PHONY: all run release run-release test fmt lint clean" >> Makefile
+  echo ".PHONY: all run release run-release test sanitize fmt lint clean" >> Makefile
 else
-  echo ".PHONY: all run release run-release fmt lint clean" >> Makefile
+  echo ".PHONY: all run release run-release sanitize fmt lint clean" >> Makefile
 fi
 # Create compile_flags.txt for IDEs and consumption by make
 FLAGS_LOOSE=(
@@ -704,7 +725,10 @@ make run foo   # build and run with arguments
 make run -- -v # use -- to pass flags starting with -
 make release   # build release
 make test      # build and run tests
+make sanitize  # build and run with address/UB sanitizers
 \`\`\`
+
+Sanitizers add significant overhead and may require a recent clang/gcc toolchain.
 
 ## Format & Lint
 
@@ -747,4 +771,7 @@ info "  make run     $(muted '# build+run')"
 info "  make release $(muted '# release build')"
 if [ "$NO_TESTS" -ne 1 ]; then
   info "  make test    $(muted '# build and run tests')"
+fi
+if [[ "$OSTYPE" == "darwin"* ]] && [[ "$ACTUAL_CC" == gcc* ]]; then
+  warn "$(muted "Sanitizers may fail with GCC on macOS (ASan runtime missing). Prefer clang for 'make sanitize'.")"
 fi
