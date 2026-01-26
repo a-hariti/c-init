@@ -274,6 +274,26 @@ if [[ "$LAST_OUT" == *"FOUND_SEP"* ]]; then
 fi
 test_ok
 
+# 12) 'make run-release' with arguments
+test_begin "'make run-release' passes arguments"
+TMPDIR_REL=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR_REL")
+PROJ_REL="$TMPDIR_REL/proj"
+./c-init.sh --no-git "$PROJ_REL" > /dev/null
+cat <<EOF > "$PROJ_REL/src/main.c"
+#include <stdio.h>
+int main(int argc, char **argv) {
+    for (int i = 1; i < argc; i++) printf("ARG:%s\n", argv[i]);
+    return 0;
+}
+EOF
+run make -C "$PROJ_REL" run-release rel_foo rel_bar
+assert_code 0
+assert_contains "$LAST_OUT" "ARG:rel_foo"
+assert_contains "$LAST_OUT" "ARG:rel_bar"
+assert_file "$PROJ_REL/target/release/proj"
+test_ok
+
 if [ "$FAIL_COUNT" -ne 0 ]; then
   exit 1
 fi

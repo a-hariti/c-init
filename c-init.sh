@@ -429,8 +429,7 @@ release:
 	@\$(MAKE) MODE=release
 
 run-release:
-	@\$(MAKE) MODE=release
-	@./\$(TARGET) \$(RUN_ARGS)
+	@\$(MAKE) MODE=release RUN_ARGS="\$(RUN_ARGS)" run
 
 # Link the executable
 \$(TARGET): \$(OBJECTS)
