@@ -14,6 +14,7 @@ Options:
   --color WHEN                 Color: auto (default) | always | never
   --force                      Allow non-empty directory
   --no-git                     Skip git init and .gitignore
+  --no-commit                  Skip initial git commit
   --no-hello                   Skip generating src/main.c
   --no-tests                   Skip generating tests and vendoring acutest
   -i, --interactive            Run interactive wizard
@@ -28,6 +29,7 @@ STRICTNESS=""
 LINTER_STRICTNESS=""
 FORCE=-1
 NO_GIT=-1
+NO_COMMIT=-1
 NO_HELLO=-1
 NO_TESTS=-1
 PROJ_NAME=""
@@ -171,6 +173,10 @@ while [ $# -gt 0 ]; do
       NO_GIT=1
       shift
       ;;
+    --no-commit)
+      NO_COMMIT=1
+      shift
+      ;;
     --no-hello)
       NO_HELLO=1
       shift
@@ -289,6 +295,7 @@ fi
 [ -z "$STRICTNESS" ] && STRICTNESS="strict"
 [ "$FORCE" -eq -1 ] && FORCE=0
 [ "$NO_GIT" -eq -1 ] && NO_GIT=0
+[ "$NO_COMMIT" -eq -1 ] && NO_COMMIT=0
 [ "$NO_HELLO" -eq -1 ] && NO_HELLO=0
 [ "$NO_TESTS" -eq -1 ] && NO_TESTS=0
 
@@ -721,6 +728,10 @@ EOF
 if [ "$NO_GIT" -ne 1 ] && [ ! -d ".git" ]; then
     git init -q
     printf "target/\n" > .gitignore
+    if [ "$NO_COMMIT" -ne 1 ]; then
+      git add -A
+      git commit -m "init" >/dev/null
+    fi
 fi
 
 info "$(green Created) project '$PROJ_NAME' at $PROJ_PATH (using $ACTUAL_CC)"

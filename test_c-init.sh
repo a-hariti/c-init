@@ -173,6 +173,20 @@ assert_file "$PROJ/tests/test-deps/acutest.h"
 assert_file "$PROJ/tests/compile_flags.txt"
 test_ok
 
+# 3c) --no-commit skips initial commit
+test_begin "--no-commit skips initial commit"
+TMPDIR_NO_COMMIT=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR_NO_COMMIT")
+PROJ_NO_COMMIT="$TMPDIR_NO_COMMIT/proj"
+run "$CINIT" --no-commit "$PROJ_NO_COMMIT"
+assert_code 0
+assert_dir "$PROJ_NO_COMMIT/.git"
+run git -C "$PROJ_NO_COMMIT" rev-parse --verify HEAD
+if [ "$LAST_CODE" -eq 0 ]; then
+  fail "expected no initial commit"
+fi
+test_ok
+
 # 3b) --no-tests skips tests and vendoring
 test_begin "--no-tests skips tests folder"
 TMPDIR_NO_TESTS=$(mktemp -d)
