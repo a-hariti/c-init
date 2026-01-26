@@ -15,20 +15,22 @@ Options:
   --force                      Allow non-empty directory
   --no-git                     Skip git init and .gitignore
   --no-hello                   Skip generating src/main.c
+  -i, --interactive            Run interactive wizard
   -h, --help                   Show this help
 EOF
 }
 
 COLOR_WHEN="auto"
 COLOR_ENABLED=1
-CC_CHOICE="clang"
-STRICTNESS="strict"
+CC_CHOICE=""
+STRICTNESS=""
 LINTER_STRICTNESS=""
-FORCE=0
-NO_GIT=0
-NO_HELLO=0
+FORCE=-1
+NO_GIT=-1
+NO_HELLO=-1
 PROJ_NAME=""
 PROJ_PATH=""
+INTERACTIVE=0
 
 err() {
   if [ "${COLOR_ENABLED:-0}" -eq 1 ]; then
@@ -64,6 +66,72 @@ muted() {
   else
     printf "%s" "$1"
   fi
+}
+
+select_menu() {
+  local prompt="$1"
+  shift
+  local options=("$@")
+  local count=${#options[@]}
+  local current=0
+  local default_idx=${DEFAULT_MENU_IDX:-0}
+  current=$default_idx
+
+  if [ ! -t 0 ]; then
+    # Try to read once if there is input
+    if read -r input; then
+      if [[ "$input" =~ ^[0-9]+$ ]] && [ "$input" -lt "$count" ]; then
+        current=$input
+      fi
+    fi
+    printf "%s: \033[32m%s\033[0m (non-interactive)\n" "$prompt" "${options[$current]}"
+    return "$current"
+  fi
+
+  # Hide cursor, save screen
+  if [ -t 0 ] && [ -n "${TERM:-}" ]; then tput civis; fi
+
+  draw_menu() {
+    printf "%s:\n" "$prompt"
+    for i in "${!options[@]}"; do
+      if [ "$i" -eq "$current" ]; then
+        printf "\033[7m> %s\033[0m\n" "${options[$i]}"
+      else
+        printf "  %s\n" "${options[$i]}"
+      fi
+    done
+  }
+
+  clear_menu() {
+    for ((i=0; i<=count; i++)); do
+      printf "\033[A\033[2K"
+    done
+    printf "\r"
+  }
+
+  draw_menu
+
+  while true; do
+    read -rsn3 key
+    case "$key" in
+      $'\033[A') # Up
+        ((current > 0)) && current=$((current - 1))
+        ;;
+      $'\033[B') # Down
+        ((current < count - 1)) && current=$((current + 1))
+        ;;
+      "") # Enter
+        break
+        ;;
+    esac
+    clear_menu
+    draw_menu
+  done
+
+  clear_menu
+  if [ -t 0 ] && [ -n "${TERM:-}" ]; then tput cnorm; fi
+  printf "%s: \033[32m%s\033[0m\n" "$prompt" "${options[$current]}"
+  return "$current"
 }
 
 while [ $# -gt 0 ]; do
@@ -105,6 +173,10 @@ while [ $# -gt 0 ]; do
       NO_HELLO=1
       shift
       ;;
+    -i|--interactive)
+      INTERACTIVE=1
+      shift
+      ;;
     -h|--help)
       show_help
       exit 0
@@ -127,11 +199,84 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+if [ "$INTERACTIVE" -eq 1 ]; then
+  info "--- c-init Interactive Wizard ---"
+  info ""
+  res=0
+
+  if [ -z "$PROJ_NAME" ] && [ -z "$PROJ_PATH" ]; then
+    if [ -t 0 ]; then
+      printf "Project Name [.]: "
+      read -r input || input=""
+      if [ -n "$input" ] && [ "$input" != "." ]; then
+        PROJ_PATH="$input"
+      fi
+    else
+      # If not a TTY, try reading from stdin once for the name
+      read -r input || input=""
+      if [ -n "$input" ] && [ "$input" != "." ]; then
+        PROJ_PATH="$input"
+      fi
+    fi
+  fi
+
+  [ -z "$PROJ_PATH" ] && PROJ_PATH="."
+
+  if [ -d "$PROJ_PATH" ] && [ "$(ls -A "$PROJ_PATH")" ] && [ "$FORCE" -eq -1 ]; then
+    DEFAULT_MENU_IDX=0 select_menu "Folder not empty. Overwrite?" "No" "Yes"
+    res=$?
+    if [ "$res" -eq 1 ]; then
+      FORCE=1
+    else
+      info "Exiting..."
+      exit 1
+    fi
+  fi
+
+  if [ -z "$CC_CHOICE" ]; then
+    DEFAULT_MENU_IDX=0 select_menu "Compiler" "clang" "gcc" || res=$?
+    if [ "$res" -eq 1 ]; then CC_CHOICE="gcc"; else CC_CHOICE="clang"; fi
+  fi
+
+  if [ -z "$STRICTNESS" ]; then
+    DEFAULT_MENU_IDX=1 select_menu "Compiler Strictness" "loose" "strict" "strictest" || res=$?
+    case "$res" in
+      0) STRICTNESS="loose" ;;
+      1) STRICTNESS="strict" ;;
+      2) STRICTNESS="strictest" ;;
+    esac
+  fi
+
+  if [ -z "$LINTER_STRICTNESS" ]; then
+    DEFAULT_MENU_IDX=0 select_menu "Linter Strictness" "(same as strictness)" "loose" "strict" "strictest" || res=$?
+    case "$res" in
+      0) LINTER_STRICTNESS="" ;;
+      1) LINTER_STRICTNESS="loose" ;;
+      2) LINTER_STRICTNESS="strict" ;;
+      3) LINTER_STRICTNESS="strictest" ;;
+    esac
+  fi
+
+  if [ "$NO_GIT" -eq -1 ]; then
+    DEFAULT_MENU_IDX=1 select_menu "Run git init?" "No" "Yes" || res=$?
+    if [ "$res" -eq 1 ]; then NO_GIT=0; else NO_GIT=1; fi
+  fi
+
+  info ""
+fi
+
+# Apply defaults for non-interactive or non-provided flags
+[ -z "$CC_CHOICE" ] && CC_CHOICE="clang"
+[ -z "$STRICTNESS" ] && STRICTNESS="strict"
+[ "$FORCE" -eq -1 ] && FORCE=0
+[ "$NO_GIT" -eq -1 ] && NO_GIT=0
+[ "$NO_HELLO" -eq -1 ] && NO_HELLO=0
+
 case "$COLOR_WHEN" in
   auto) COLOR_ENABLED=1 ;;
   always) COLOR_ENABLED=1 ;;
   never) COLOR_ENABLED=0 ;;
-  *)
+  *) 
     err "--color must be auto, always, or never"
     exit 1
     ;;
@@ -149,7 +294,7 @@ fi
 
 case "$CC_CHOICE" in
   clang|gcc) ;;
-  *)
+  *) 
     err "--cc must be clang or gcc"
     exit 1
     ;;
@@ -157,7 +302,7 @@ esac
 
 case "$STRICTNESS" in
   loose|strict|strictest) ;;
-  *)
+  *) 
     err "--strictness must be loose, strict, or strictest"
     exit 1
     ;;
@@ -166,7 +311,7 @@ esac
 if [ -n "$LINTER_STRICTNESS" ]; then
   case "$LINTER_STRICTNESS" in
     loose|strict|strictest) ;;
-    *)
+    *) 
       err "--linter-strictness must be loose, strict, or strictest"
       exit 1
       ;;
@@ -284,7 +429,6 @@ clean:
 
 .PHONY: all run release run-release fmt lint clean
 EOF
-
 # Create compile_flags.txt for IDEs and consumption by make
 FLAGS_LOOSE=(
   -std=c11

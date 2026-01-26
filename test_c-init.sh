@@ -3,7 +3,13 @@
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-CINIT="$ROOT/c-init.sh"
+RAW_CINIT="${1:-$ROOT/c-init.sh}"
+# Resolve to absolute path if relative
+if [[ "$RAW_CINIT" = /* ]]; then
+  CINIT="$RAW_CINIT"
+else
+  CINIT="$(pwd)/$RAW_CINIT"
+fi
 
 LAST_OUT=""
 LAST_ERR=""
@@ -50,16 +56,16 @@ fail() {
 }
 
 run() {
-  local out err
-  out=$(mktemp)
-  err=$(mktemp)
+  local LAST_OUT_FILE=$(mktemp)
+  local LAST_ERR_FILE=$(mktemp)
   set +e
-  "$@" >"$out" 2>"$err"
+  "$@" >"$LAST_OUT_FILE" 2>"$LAST_ERR_FILE"
   LAST_CODE=$?
   set -e
-  LAST_OUT=$(cat "$out")
-  LAST_ERR=$(cat "$err")
-  rm -f "$out" "$err"
+  LAST_OUT=$(cat "$LAST_OUT_FILE")
+  LAST_ERR=$(cat "$LAST_ERR_FILE")
+  COMBINED="$LAST_OUT$LAST_ERR"
+  rm -f "$LAST_OUT_FILE" "$LAST_ERR_FILE"
 }
 
 assert_code() {
@@ -98,12 +104,15 @@ assert_code 0
 assert_contains "$LAST_OUT" "Usage:"
 test_ok
 
-# 2) Unknown flag should exit 1 and print help to stderr
+# 2) Unknown flag should exit 1 and print help
 test_begin "unknown flag exits 1 and prints help"
 run "$CINIT" --garbage
 assert_code 1
-assert_contains "$LAST_ERR" "Unknown option: --garbage"
-assert_contains "$LAST_ERR" "Usage:"
+# Both print "unknown option" and "--garbage" though case/quotes vary
+COMBINED="$LAST_OUT$LAST_ERR"
+assert_contains "$(echo "$COMBINED" | tr '[:upper:]' '[:lower:]')" "unknown option"
+assert_contains "$COMBINED" "--garbage"
+assert_contains "$COMBINED" "Usage:"
 test_ok
 
 # 3) Create project with no hello and no git
@@ -143,6 +152,36 @@ assert_code 0
 assert_file "$PROJ3/.clang-tidy"
 assert_contains "$(cat "$PROJ3/.clang-tidy")" "modernize"
 test_ok
+
+# 6) Interactive mode creates project
+test_begin "interactive mode creates project"
+TMPDIR4=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR4")
+cd "$TMPDIR4"
+# Give a name for the prompt
+run "$CINIT" -i <<< "interactive_proj"
+assert_code 0
+assert_dir "interactive_proj"
+assert_file "interactive_proj/src/main.c"
+assert_dir "interactive_proj/.git"
+cd "$ROOT"
+test_ok
+
+# 7) Interactive mode refuses overwrite
+test_begin "interactive mode refuses overwrite"
+TMPDIR5=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR5")
+cd "$TMPDIR5"
+mkdir -p "existing"
+touch "existing/file"
+
+# Input "existing" then "0" (No) for overwrite
+run "$CINIT" -i <<< "$(printf "existing\n0\n")"
+assert_code 1
+assert_contains "$COMBINED" "Exiting..."
+cd "$ROOT"
+test_ok
+
 
 if [ "$FAIL_COUNT" -ne 0 ]; then
   exit 1

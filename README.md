@@ -24,6 +24,7 @@ Common options:
 - `--force`                      Allow non-empty directory
 - `--no-git`                     Skip git init and .gitignore
 - `--no-hello`                   Skip generating `src/main.c`
+- `-i, --interactive`            Run interactive wizard
 - `-h, --help`                   Show help
 
 Example:
