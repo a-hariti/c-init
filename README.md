@@ -14,12 +14,13 @@ Or run via curl:
 curl -fsSL https://raw.githubusercontent.com/a-hariti/c-init/master/c-init.sh | bash -s -- my_app # [options]
 ```
 
-Common options:
+Options:
 
 - `--name NAME`                  Project name (defaults to directory name)
 - `--cc clang|gcc`               Choose compiler (default: clang)
 - `-s, --strictness LEVEL`       loose | strict (default) | strictest
 - `--linter-strictness LEVEL`    loose | strict | strictest (overrides `-s` for lint only)
+- `--no-tests`                   Skip generating tests and vendoring acutest
 - `--color WHEN`                 auto (default) | always | never
 - `--force`                      Allow non-empty directory
 - `--no-git`                     Skip git init and .gitignore
