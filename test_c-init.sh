@@ -182,6 +182,18 @@ assert_contains "$COMBINED" "Exiting..."
 cd "$ROOT"
 test_ok
 
+# 8) GCC flags are correctly generated
+test_begin "GCC flags are correctly generated"
+TMPDIR6=$(mktemp -d)
+TMP_DIRS+=("$TMPDIR6")
+PROJ6="$TMPDIR6/proj"
+run "$CINIT" --cc gcc -s strictest "$PROJ6"
+assert_code 0
+assert_file "$PROJ6/compile_flags.txt"
+# Check for a GCC-specific flag like -Wlogical-op or -Wduplicated-cond
+assert_contains "$(cat "$PROJ6/compile_flags.txt")" "-Wlogical-op"
+assert_contains "$(cat "$PROJ6/compile_flags.txt")" "-Wduplicated-cond"
+test_ok
 
 if [ "$FAIL_COUNT" -ne 0 ]; then
   exit 1
