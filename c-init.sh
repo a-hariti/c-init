@@ -383,7 +383,7 @@ NAME    := $PROJ_NAME_LOWER
 SRC_DIR := src
 INC_DIR := include
 
-CFLAGS_BASE  := \$(shell cat compile_flags.txt)
+CFLAGS_BASE  := @compile_flags.txt
 
 CFLAGS_DEBUG   := -O0 -g
 CFLAGS_RELEASE := -O3 -DNDEBUG
