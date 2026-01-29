@@ -1,4 +1,4 @@
--std=c11
+-std=c2x
 -I../include
 -I.
 -isystem

@@ -10,7 +10,7 @@ use std::process::{Command, ExitCode};
 
 const FLAGS_LOOSE_BASE: &str = indoc!(
     r#"
-    -std=c11
+    -std=c2x
     -Iinclude
     -Wall
     -Wextra
