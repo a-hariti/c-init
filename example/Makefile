@@ -109,25 +109,25 @@ clean:
 
 TEST_DIR := tests
 TEST_BUILD_DIR := $(BUILD_DIR)/tests
-TEST_TARGET := $(TEST_BUILD_DIR)/$(NAME)_tests
 TEST_CFLAGS_BASE := @compile_flags.txt
 TEST_CFLAGS := $(TEST_CFLAGS_BASE) $(CFLAGS_MODE)
 
 TEST_SOURCES := $(wildcard $(TEST_DIR)/*.c)
-TEST_OBJECTS := $(TEST_SOURCES:$(TEST_DIR)/%.c=$(TEST_BUILD_DIR)/%.o)
+TEST_BINARIES := $(TEST_SOURCES:$(TEST_DIR)/%.c=$(TEST_BUILD_DIR)/%)
 
 ifneq ($(strip $(TEST_SOURCES)),)
-test: $(TEST_TARGET)
-	@./$(TEST_TARGET)
+test: $(TEST_BINARIES)
+	@for t in $(TEST_BINARIES); do \
+		echo "--------------------"; \
+		echo "$${t##*/}"; \
+		echo "--------------------"; \
+		./$$t; \
+	done
 
-$(TEST_TARGET): $(TEST_OBJECTS)
-	@mkdir -p $(TEST_BUILD_DIR)
-	$(CC) $(TEST_OBJECTS) -o $(TEST_TARGET) $(LDFLAGS)
-
-$(TEST_BUILD_DIR)/%.o: $(TEST_DIR)/%.c
+$(TEST_BUILD_DIR)/%: $(TEST_DIR)/%.c
 	@mkdir -p $(TEST_BUILD_DIR)
 	@cd $(TEST_DIR) && \
-		$(CC) $(TEST_CFLAGS) -c $(notdir $<) -o ../$@
+		$(CC) $(TEST_CFLAGS) $(notdir $<) -o ../$@ $(LDFLAGS)
 else
 test:
 	@echo "No tests found in $(TEST_DIR)/ (add *.c)."
