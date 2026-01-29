@@ -6,13 +6,14 @@ INC_DIR := include
 
 CFLAGS_BASE  := @compile_flags.txt
 
-CFLAGS_DEBUG   := -O0 -g
-CFLAGS_RELEASE := -O3 -DNDEBUG
-CFLAGS_SANITIZE := -fsanitize=address,undefined -fno-omit-frame-pointer -O1 -g
+CFLAGS_DEBUG     := -O0 -g
+CFLAGS_RELEASE   := -O3 -DNDEBUG
+CFLAGS_SANITIZE  := -fsanitize=address,undefined -fno-omit-frame-pointer -O1 -g
 LDFLAGS_SANITIZE := -fsanitize=address,undefined
 
 MODE ?= debug
 SANITIZE ?= 0
+QUIET ?= 0
 ifeq ($(MODE),release)
   BUILD_DIR := target/release
   CFLAGS_MODE := $(CFLAGS_RELEASE)
@@ -37,9 +38,16 @@ TARGET = $(BUILD_DIR)/$(NAME)
 SOURCES := $(wildcard $(SRC_DIR)/*.c)
 OBJECTS := $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
+# Quiet mode: suppress compiler/linker command lines.
+ifeq ($(QUIET),1)
+  Q := @
+else
+  Q :=
+endif
+
 # Some cursed make magic to enable make run [args]
-# If the first argument is "run" or "run-release"...
-ifeq ($(firstword $(MAKECMDGOALS)),$(filter $(firstword $(MAKECMDGOALS)),run run-release))
+# If the first argument is "run", "run-release", or "watch"...
+ifeq ($(firstword $(MAKECMDGOALS)),$(filter $(firstword $(MAKECMDGOALS)),run run-release watch))
   # Extract all goals after the first one
   ALL_GOALS := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
   # If the first argument is "--", skip it for the program args but keep it for targets
@@ -56,7 +64,16 @@ all: $(TARGET)
 
 # Build and run
 run: $(TARGET)
+ifeq ($(WATCH),1)
+	@command -v entr >/dev/null && \
+		find $(SRC_DIR) $(INC_DIR) -type f \( -name '*.c' -o -name '*.h' \) | \
+		entr -ccr $(MAKE) --no-print-directory run RUN_ARGS="$(RUN_ARGS)" WATCH=0 QUIET=1 || \
+	command -v watchexec >/dev/null && \
+		watchexec -r -e c,h -- sh -c 'clear; $(MAKE) --no-print-directory run RUN_ARGS="$(RUN_ARGS)" WATCH=0 QUIET=1' || \
+		echo "watch requires 'entr' or 'watchexec' in PATH"
+else
 	@./$(TARGET) $(RUN_ARGS)
+endif
 
 release:
 	@$(MAKE) MODE=release
@@ -64,15 +81,18 @@ release:
 run-release:
 	@$(MAKE) MODE=release RUN_ARGS="$(RUN_ARGS)" run
 
+watch:
+	@$(MAKE) WATCH=1 RUN_ARGS="$(RUN_ARGS)" run
+
 # Link the executable
 $(TARGET): $(OBJECTS)
 	@mkdir -p $(OBJ_DIR)
-	$(CC) $(OBJECTS) -o $(TARGET) $(LDFLAGS)
+	$(Q)$(CC) $(OBJECTS) -o $(TARGET) $(LDFLAGS)
 
 # Compile source files to object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(OBJ_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
 fmt:
 	@command -v clang-format >/dev/null && \

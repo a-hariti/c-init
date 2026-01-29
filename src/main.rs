@@ -737,8 +737,8 @@ fn main() -> ExitCode {
         muted("# build+run", color_enabled)
     ));
     info(&format!(
-        "  make release {}",
-        muted("# release build", color_enabled)
+        "  make watch   {}",
+        muted("# run in watch mode", color_enabled)
     ));
     if !no_tests {
         info(&format!(
@@ -746,6 +746,11 @@ fn main() -> ExitCode {
             muted("# build and run tests", color_enabled)
         ));
     }
+    info(&format!(
+        "  make release {}",
+        muted("# release build", color_enabled)
+    ));
+    info("\nHappy Hacking!");
 
     if cfg!(target_os = "macos") && actual_cc.starts_with("gcc") {
         warn(

@@ -55,10 +55,12 @@ Created project 'my_app' at my_app
 Next steps:
   make          # debug build
   make run      # build+run
-  make release  # release build
+  make watch    # run in watch mode
   make test     # build and run tests
-  make sanitize # build and run with address/UB sanitizers
+  make release  # release build
 ```
+
+Note: `make watch` requires [entr](https://github.com/eradman/entr) or [watchexec](https://github.com/watchexec/watchexec) to be in your `$PATH`.
 
 ## What you get
 
